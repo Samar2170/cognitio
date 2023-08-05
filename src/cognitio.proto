@@ -8,7 +8,7 @@ message SignupRequest {
 }
 
 message SignupResponse {
-  string token = 1;
+  string response = 1;
 }
 
 message LoginRequest {

@@ -2,6 +2,9 @@ package internal
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
+	"net/smtp"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -48,13 +51,27 @@ func LoginUser(username string, encryptedPassword string) (string, error) {
 	if password != user.Password {
 		return "", errors.New("invalid password")
 	}
-	return createToken(username, user.CID)
+	token, err := createToken(username, user.CID)
+	if err != nil {
+		return "", err
+	}
+	us := UserSession{
+		User:      *user,
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+	}
+	err = createModelInstance(&us)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
-func SignupUser(email, username, encryptedPassword string) error {
+func SignupUser(email, username, encryptedPassword string) (string, error) {
 	password, err := decryptPassword(encryptedPassword)
 	if err != nil {
-		return err
+		return "", err
 	}
 	user := User{
 		Email:    email,
@@ -62,5 +79,62 @@ func SignupUser(email, username, encryptedPassword string) error {
 		Password: password,
 		CID:      getCIDForUser(),
 	}
-	return user.create()
+	err = createModelInstance(&user)
+	if err != nil {
+		return "", err
+	}
+	err = sendEmailVerification(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.CID, nil
+}
+
+func sendEmailVerification(user *User) error {
+	otp := rand.Int()
+	uv := UserSignupVerification{
+		User:      *user,
+		UserID:    user.ID,
+		Email:     user.Email,
+		OTP:       fmt.Sprintf("%d", otp),
+		ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+		Verified:  false,
+	}
+	err := createModelInstance(&uv)
+	if err != nil {
+		return err
+	}
+	template := fmt.Sprintf(`Hi {{user.Username}},
+	Welcome to Cognitio. Please verify your email by entering the following OTP:
+	{{otp}}
+	
+	Thanks,
+	`, user.Username, otp)
+	message := []byte(template)
+	auth := smtp.PlainAuth("", emailAccount, emailPassword, smtpHost)
+	err = smtp.SendMail(smtpHost+":"+smtpPort, auth, emailAccount, []string{user.Email}, message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func VerifyEmailOTP(userCID, otp string) error {
+	user, err := getUserByCID(userCID)
+	if err != nil {
+		return err
+	}
+	uv, err := getUserVerificationByEmail(user.Email)
+	if err != nil {
+		return err
+	}
+	if uv.OTP != otp {
+		return errors.New("invalid otp")
+	}
+	uv.Verified = true
+	err = updateModelInstance(uv)
+	if err != nil {
+		return err
+	}
+	return nil
 }
