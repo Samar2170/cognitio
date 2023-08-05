@@ -1,0 +1,35 @@
+syntax = "proto3";
+option go_package = "./api";
+
+message SignupRequest {
+  string email = 1;
+  string username = 2;
+  string password = 3;
+}
+
+message SignupResponse {
+  string token = 1;
+}
+
+message LoginRequest {
+  string user = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string token = 1;
+}
+
+message AuthRequest {
+    string token = 1;
+}
+
+message AuthResponse {
+    bool valid = 1;
+}
+
+service AuthService {
+  rpc Signup(SignupRequest) returns (SignupResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Auth(AuthRequest) returns (AuthResponse);
+}
