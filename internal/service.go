@@ -13,7 +13,7 @@ import (
 
 type UserClaim struct {
 	Username string `json:"username"`
-	UserId   string `json:"user_cid"`
+	UserCid  string `json:"user_cid"`
 	jwt.RegisteredClaims
 }
 
@@ -83,10 +83,10 @@ func SignupUser(email, username, encryptedPassword string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = sendEmailVerification(&user)
-	if err != nil {
-		return "", err
-	}
+	// err = sendEmailVerification(&user)
+	// if err != nil {
+	// 	return "", err
+	// }
 	return user.CID, nil
 }
 
@@ -104,9 +104,9 @@ func sendEmailVerification(user *User) error {
 	if err != nil {
 		return err
 	}
-	template := fmt.Sprintf(`Hi {{user.Username}},
+	template := fmt.Sprintf(`Hi`+user.Username+`,
 	Welcome to Cognitio. Please verify your email by entering the following OTP:
-	{{otp}}
+	`+fmt.Sprintf("%d", otp)+`
 	
 	Thanks,
 	`, user.Username, otp)
@@ -137,4 +137,23 @@ func VerifyEmailOTP(userCID, otp string) error {
 		return err
 	}
 	return nil
+}
+
+func VerifyToken(token string) (User, error) {
+	empty := User{}
+	claims := UserClaim{}
+	tkn, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (interface{}, error) {
+		return signingKey, nil
+	})
+	if err != nil {
+		return empty, err
+	}
+	if !tkn.Valid {
+		return empty, errors.New("invalid token")
+	}
+	user, err := getUserByCID(claims.UserCid)
+	if err != nil {
+		return empty, err
+	}
+	return *user, nil
 }

@@ -1,6 +1,9 @@
 package internal
 
-import "github.com/spf13/viper"
+import (
+	"github.com/samar2170/cognitio/pkg/db"
+	"github.com/spf13/viper"
+)
 
 const (
 	smtpHost = "smtp.gmail.com"
@@ -20,5 +23,10 @@ func loadEnvVariables() {
 	signingKey = []byte(viper.GetString("SIGNING_KEY"))
 	emailAccount = viper.GetString("EMAIL_ACCOUNT")
 	emailPassword = viper.GetString("EMAIL_PASSWORD")
-
+}
+func init() {
+	loadEnvVariables()
+	db.DB.AutoMigrate(User{})
+	db.DB.AutoMigrate(UserSession{})
+	db.DB.AutoMigrate(UserSignupVerification{})
 }

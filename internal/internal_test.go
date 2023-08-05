@@ -1,4 +1,4 @@
-package internal
+package internal_test
 
 import (
 	"crypto/aes"
@@ -6,7 +6,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"os"
+	"testing"
 )
+
+var passwordDecryptionKey []byte
 
 func encryptPasswordP(password string) string {
 	block, err := aes.NewCipher(passwordDecryptionKey)
@@ -40,6 +44,20 @@ func decryptPasswordP(password string) (string, error) {
 	return string(cipherTextBytes), nil
 }
 
-func decryptPassword(password string) (string, error) {
-	return password, nil
+func TestSecurity(t *testing.T) {
+	os.Setenv("PASSWORD_DECRYPTION_KEY", "12345678901234567890123456789012")
+	defer os.Unsetenv("PASSWORD_DECRYPTION_KEY")
+	passwordDecryptionKey = []byte(os.Getenv("PASSWORD_DECRYPTION_KEY"))
+	password := "test"
+	encryptedPassword := encryptPasswordP(password)
+	t.Log("encryptedPassword: ", encryptedPassword)
+	decryptedPassword, err := decryptPasswordP(encryptedPassword)
+	t.Log("decryptedPassword: ", decryptedPassword)
+	if err != nil {
+		t.Error(err)
+	}
+	if decryptedPassword != password {
+		t.Error("decrypted password is not equal to original password")
+	}
+	t.Log("TestSecurity passed")
 }
