@@ -44,7 +44,7 @@ func LoginUser(username string, encryptedPassword string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	password, err := decryptPassword(encryptedPassword)
+	password, err := DecryptPassword(encryptedPassword)
 	if err != nil {
 		return "", err
 	}
@@ -69,7 +69,7 @@ func LoginUser(username string, encryptedPassword string) (string, error) {
 }
 
 func SignupUser(email, username, encryptedPassword string) (string, error) {
-	password, err := decryptPassword(encryptedPassword)
+	password, err := DecryptPassword(encryptedPassword)
 	if err != nil {
 		return "", err
 	}

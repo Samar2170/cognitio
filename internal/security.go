@@ -5,10 +5,11 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"io"
 )
 
-func encryptPasswordP(password string) string {
+func EncryptPassword(password string) string {
 	block, err := aes.NewCipher(passwordDecryptionKey)
 	if err != nil {
 		return ""
@@ -24,14 +25,17 @@ func encryptPasswordP(password string) string {
 	return hex.EncodeToString(cipherText)
 }
 
-func decryptPasswordP(password string) (string, error) {
+func DecryptPassword(password string) (string, error) {
+	if password == "" {
+		return "", errors.New("password is empty")
+	}
 	cipherTextBytes, err := hex.DecodeString(password)
 	if err != nil {
-		return "", err
+		return "", errors.New("Error during hex decoding of password:  " + err.Error())
 	}
 	block, err := aes.NewCipher(passwordDecryptionKey)
 	if err != nil {
-		return "", err
+		return "", errors.New("Error during creation of cipher block:  " + err.Error())
 	}
 	iv := cipherTextBytes[:aes.BlockSize]
 	cipherTextBytes = cipherTextBytes[aes.BlockSize:]
@@ -40,6 +44,6 @@ func decryptPasswordP(password string) (string, error) {
 	return string(cipherTextBytes), nil
 }
 
-func decryptPassword(password string) (string, error) {
-	return password, nil
-}
+// func decryptPassword(password string) (string, error) {
+// 	return password, nil
+// }

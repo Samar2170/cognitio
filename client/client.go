@@ -2,6 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"io"
 	"log"
 
 	"github.com/samar2170/cognitio/api/cognitio/api"
@@ -9,27 +15,32 @@ import (
 	"google.golang.org/grpc"
 )
 
-var passwordDecryptionKey = []byte(viper.GetString("PASSWORD_DECRYPTION_KEY"))
-
-func encryptPassword(password string) string {
-	return password
+func init() {
+	viper.SetConfigFile(".env")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatal("Error reading config file: " + err.Error())
+	}
+	passwordDecryptionKey = []byte(viper.GetString("PASSWORD_DECRYPTION_KEY"))
 }
 
-// func encryptPassword(password string) string {
-// 	block, err := aes.NewCipher(passwordDecryptionKey)
-// 	if err != nil {
-// 		return ""
-// 	}
-// 	cipherText := make([]byte, aes.BlockSize+len(password))
-// 	iv := cipherText[:aes.BlockSize]
-// 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-// 		return ""
-// 	}
-// 	stream := cipher.NewCFBEncrypter(block, iv)
-// 	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(password))
+var passwordDecryptionKey []byte
 
-// 	return hex.EncodeToString(cipherText)
-// }
+func encryptPassword(password string) (string, error) {
+	block, err := aes.NewCipher(passwordDecryptionKey)
+	if err != nil {
+		return "", errors.New("Error during creation of cipher block:  " + err.Error())
+	}
+	cipherText := make([]byte, aes.BlockSize+len(password))
+	iv := cipherText[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", errors.New("Error during reading of random bytes:  " + err.Error())
+	}
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(password))
+
+	return hex.EncodeToString(cipherText), nil
+}
 
 func main() {
 	conn, err := grpc.Dial("localhost:9000", grpc.WithInsecure())
@@ -39,7 +50,11 @@ func main() {
 	defer conn.Close()
 
 	client := api.NewAuthServiceClient(conn)
-	password := encryptPassword("test")
+	password, err := encryptPassword("test")
+	if err != nil {
+		log.Fatalf("could not encrypt password: %v", err)
+	}
+	log.Println("password: ", password)
 	// response, err := client.Signup(context.Background(), &api.SignupRequest{
 	// 	Email:    "test@test.co.in",
 	// 	Username: "test",
