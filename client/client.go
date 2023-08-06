@@ -42,6 +42,11 @@ func encryptPassword(password string) (string, error) {
 	return hex.EncodeToString(cipherText), nil
 }
 
+type User struct {
+	Username string
+	UserCid  string
+}
+
 func main() {
 	conn, err := grpc.Dial("localhost:9000", grpc.WithInsecure())
 	if err != nil {
@@ -50,22 +55,47 @@ func main() {
 	defer conn.Close()
 
 	client := api.NewAuthServiceClient(conn)
-	password, err := encryptPassword("test")
+	token, err := login(&client, "test", "test")
 	if err != nil {
-		log.Fatalf("could not encrypt password: %v", err)
+		log.Fatalf("could not login: %v", err)
 	}
-	log.Println("password: ", password)
-	// response, err := client.Signup(context.Background(), &api.SignupRequest{
-	// 	Email:    "test@test.co.in",
-	// 	Username: "test",
-	// 	Password: password,
-	// })
-	response, err := client.Login(context.Background(), &api.LoginRequest{
-		Username: "test",
+	log.Printf("Token: %s", token)
+
+	user, err := verifyToken(&client, token)
+	if err != nil {
+		log.Fatalf("could not verify token: %v", err)
+	}
+	log.Printf("User: %s, %s", user.Username, user.UserCid)
+
+}
+
+func verifyToken(c *api.AuthServiceClient, token string) (User, error) {
+	response, err := (*c).Authenticate(context.Background(), &api.AuthRequest{
+		Token: token,
+	})
+	if err != nil {
+		log.Fatalf("could not login: %v", err)
+	}
+	log.Printf("Response from server: %s, %s", response.Username, response.UserCid)
+	return User{
+		Username: response.Username,
+		UserCid:  response.UserCid,
+	}, nil
+}
+
+func login(c *api.AuthServiceClient, username, password string) (string, error) {
+	password, err := encryptPassword(password)
+	if err != nil {
+		return "", err
+	}
+	response, err := (*c).Login(context.Background(), &api.LoginRequest{
+		Username: username,
 		Password: password,
 	})
 	if err != nil {
-		log.Fatalf("could not signup: %v", err)
+		log.Fatalf("could not login: %v", err)
 	}
 	log.Printf("Response from server: %s", response.Token)
+
+	return response.Token, nil
 }

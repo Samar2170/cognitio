@@ -50,7 +50,7 @@ func getUserByUsername(username string) (*User, error) {
 
 func getUserByCID(cid string) (*User, error) {
 	var user User
-	err := db.DB.Where("cid = ?", cid).First(&user).Error
+	err := db.DB.Where("c_id = ?", cid).First(&user).Error
 	return &user, err
 }
 
