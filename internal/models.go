@@ -19,9 +19,9 @@ type DBModel interface {
 type User struct {
 	*gorm.Model
 	ID       uint   `gorm:"PrimaryIndex"`
-	CID      string `gorm:"index,unique"`
-	Email    string `gorm:"Unique"`
-	Username string `gorm:"index,unique"`
+	CID      string `gorm:"uniqueIndex"`
+	Email    string `gorm:"unique"`
+	Username string `gorm:"uniqueIndex"`
 	Password string
 }
 
