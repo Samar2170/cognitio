@@ -7,10 +7,20 @@ import (
 
 	"github.com/samar2170/cognitio/api/cognitio/api"
 	"github.com/samar2170/cognitio/internal"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var grpcPort string
+
+func init() {
+	viper.SetConfigFile(".env")
+	viper.ReadInConfig()
+	grpcPort = viper.GetString("GRPC_PORT")
+
+}
 
 type grpcServer struct {
 	api.UnimplementedAuthServiceServer
@@ -45,7 +55,9 @@ func (s *grpcServer) Authenticate(ctx context.Context, req *api.AuthRequest) (*a
 
 func main() {
 	log.Println("Starting server...")
-	lis, err := net.Listen("tcp", ":9000")
+
+	lis, err := net.Listen("tcp", ":"+grpcPort)
+	log.Println("listening on port :", grpcPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
